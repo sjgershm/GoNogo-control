@@ -30,7 +30,7 @@ function [lik, latents] = lik_adaptive(param,data)
     
     for n = 1:data.N
     
-        if n == 1 || data.block(n)~=data.block(n-1)
+        if n == 1 %|| data.block(n)~=data.block(n-1)
             L = log(w0) - log(1-w0);
         end
         

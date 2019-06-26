@@ -4,6 +4,24 @@ function plot_results(fig,results)
     
     switch fig
         
+        case 'weight_dynamics'
+            
+            load results1
+            data = load_data('data1.csv');
+            
+            W = cell(1,2);
+            for s = 1:length(data)
+                c = data(s).cond(1);
+                ix = data(s).s==3;
+                W{c}(end+1,:) = results(3).latents(s).w(ix);
+            end
+            
+            plot([W{1}(1,:)' W{2}(1,:)'],'LineWidth',4);
+            set(gca,'FontSize',20,'YLim',[0 1]);
+            ylabel('Adaptive weight (w)','FontSize',25);
+            xlabel('Trial','FontSize',25);
+            legend({'Low control' 'High control'},'FontSize',25,'Location','NorthOutside');
+        
         case 'gobias'
             
             subplot(2,2,1); plot_results('gobias1'); title('Experiment 1','FontSize',25,'FontWeight','Bold');
@@ -17,13 +35,15 @@ function plot_results(fig,results)
             % Go bias for experiment 1
             
             data = load_data('data1.csv');
+            load results1
             
-            acc = cell(1,2);
+            acc = cell(2,2);
             for s = 1:length(data)
                 c = data(s).cond(1);
                 go = data(s).s==1;
                 nogo = data(s).s==2;
                 acc{1,c}(end+1) = mean(data(s).acc(go)) - mean(data(s).acc(nogo));
+                acc{2,c}(end+1) = mean(results(3).latents(s).acc(go)) - mean(results(3).latents(s).acc(nogo));
             end
             
             for c = 1:2
@@ -33,9 +53,10 @@ function plot_results(fig,results)
                 end
             end
             
-            barerrorbar(m,err);
-            set(gca,'XTickLabel',{'Low control' 'High control'},'FontSize',25,'XLim',[0.5 2.5],'YLim',[0 0.4]);
+            barerrorbar(m',err');
+            set(gca,'XTickLabel',{'Data' 'Model'},'FontSize',25,'XLim',[0.5 2.5],'YLim',[0 0.55]);
             ylabel('Go bias','FontSize',25);
+            legend({'Low control' 'High control'},'FontSize',25);
             
             [~,p,~,stat] = ttest2(acc{1,1},acc{1,2});
             disp(['go bias (experiment 1): t(',num2str(stat.df),') = ',num2str(stat.tstat),', p = ',num2str(p)]);
@@ -45,18 +66,26 @@ function plot_results(fig,results)
             % Go bias for experiment 2
             
             data = load_data('data2.csv');
+            load results2
             
             for s = 1:length(data)
                 acc(s,1) = mean(data(s).acc(data(s).s==1)) - mean(data(s).acc(data(s).s==2));
                 acc(s,2) = mean(data(s).acc(data(s).s==4)) - mean(data(s).acc(data(s).s==5));
+                macc(s,1) = mean(results(3).latents(s).acc(data(s).s==1)) - mean(results(3).latents(s).acc(data(s).s==2));
+                macc(s,2) = mean(results(3).latents(s).acc(data(s).s==4)) - mean(results(3).latents(s).acc(data(s).s==5));
             end
             
             d = acc(:,1) - acc(:,2);
-            err = std(d)./sqrt(length(d)); err = repmat(err,2,1);
-            m = mean(acc);
+            err = zeros(2);
+            err(:,1) = std(d)./sqrt(length(d));
+            m(:,1) = mean(acc);
+            
+            d = macc(:,1) - macc(:,2);
+            err(:,2) = std(d)./sqrt(length(d));
+            m(:,2) = mean(acc);
             
             barerrorbar(m',err');
-            set(gca,'XTickLabel',{'Low control' 'High control'},'FontSize',25,'XLim',[0.5 2.5],'YLim',[0 0.4]);
+            set(gca,'XTickLabel',{'Data' 'Model'},'FontSize',25,'XLim',[0.5 2.5],'YLim',[0 0.55]);
             ylabel('Go bias','FontSize',25);
             
             [~,p,~,stat] = ttest(acc(:,1),acc(:,2));
@@ -64,7 +93,7 @@ function plot_results(fig,results)
             
         case 'weight1'
             
-            % Pavlovian weight across subjects for experiment 1
+            % Pavlovian weight across subjects
             
             data = load_data('data1.csv');
             load results1
@@ -105,7 +134,7 @@ function plot_results(fig,results)
             data = load_data('data1.csv');
             load results1
             
-            q = linspace(0,1,5);
+            q = linspace(0,1,6);
             for s=1:length(data)
                 w = results(3).latents(s).w;
                 wq = quantile(w,q);
@@ -122,10 +151,10 @@ function plot_results(fig,results)
             [err,m] = wse(gobias);
             errorbar(q,m,err,'ok','LineWidth',4,'MarkerSize',12,'MarkerFaceColor','k');
             hold on; plot(q,nanmedian(model_gobias),'-r','LineWidth',4);
-            set(gca,'XLim',[0 1],'FontSize',25,'YLim',[-0.1 1]);
+            set(gca,'XLim',[0 1],'FontSize',25,'YLim',[0 0.55]);
             xlabel('Adaptive weight','FontSize',25);
             ylabel('Go bias','FontSize',25);
-            legend({'Data' 'Model'}','FontSize',25,'Location','North');
+            legend({'Data' 'Model'}','FontSize',25,'Location','NorthWest');
             
             [~,p,~,stat] = ttest(gobias(:,1),gobias(:,end));
             disp(['weight (experiment 1): t(',num2str(stat.df),') = ',num2str(stat.tstat),', p = ',num2str(p)]);
@@ -137,7 +166,7 @@ function plot_results(fig,results)
             data = load_data('data2.csv');
             if nargin < 2; load results2; end
             
-            q = linspace(0,1,5);
+            q = linspace(0,1,6);
             for s=1:length(data)
                 w = results(3).latents(s).w;
                 wq = quantile(w,q);
@@ -154,37 +183,38 @@ function plot_results(fig,results)
             [err,m] = wse(gobias);
             errorbar(q,m,err,'ok','LineWidth',4,'MarkerSize',12,'MarkerFaceColor','k');
             hold on; plot(q,nanmedian(model_gobias),'-r','LineWidth',4);
-            set(gca,'XLim',[0 1],'FontSize',25,'YLim',[-0.1 1]);
+            set(gca,'XLim',[0 1],'FontSize',25,'YLim',[0 0.55]);
             xlabel('Adaptive weight','FontSize',25);
             ylabel('Go bias','FontSize',25);
-            legend({'Data' 'Model'}','FontSize',25,'Location','North');
             
             [~,p,~,stat] = ttest(gobias(:,1),gobias(:,end));
             disp(['weight (experiment 2): t(',num2str(stat.df),') = ',num2str(stat.tstat),', p = ',num2str(p)]);
             
         case 'simulation'
             
-            rng(3);
+            %rng(3);
             data = load_data('data1.csv');
-            param = [3 0.5 2 0.5 2];
+            load results1;
+            param = median(results(3).x);
+            %param = [3 0.5 2 0.5 2];
             data = data(randperm(length(data)));
-            simdata(1) = sim_adaptive(param,data(1),[0.2 0.8; 0.8 0.2; 0.5 0.5]);
-            simdata(2) = sim_adaptive(param,data(2),[0.2 0.8; 0.8 0.2; 0.2 0.8]);
+            simdata(1) = sim_adaptive(param,data(1).s,[0.25 0.75; 0.75 0.25; 0.5 0.5]);
+            simdata(2) = sim_adaptive(param,data(2).s,[0.25 0.75; 0.75 0.25; 0.2 0.8]);
             
-            w = [simdata(1).w' simdata(2).w'];
+            w = [simdata(1).w simdata(2).w];
             
             subplot(1,2,1);
             plot(w,'LineWidth',4);
             legend({'Low control' 'High control'},'FontSize',25,'Location','Best');
             set(gca,'XLim',[0 121],'FontSize',25,'YLim',[-0.1 1.1]);
-            ylabel('Pavlovian weight','FontSize',25);
+            ylabel('Adaptive weight','FontSize',25);
             xlabel('Trial','FontSize',25);
             
             subplot(1,2,2);
             go_bias(1) = mean(simdata(1).acc(simdata(1).s==1)) - mean(simdata(1).acc(simdata(1).s==2));
             go_bias(2) = mean(simdata(2).acc(simdata(2).s==1)) - mean(simdata(2).acc(simdata(2).s==2));
             bar(go_bias);
-            set(gca,'XTickLabel',{'Low control' 'High control'},'FontSize',25,'XLim',[0.5 2.5],'YLim',[-0.01 0.3]);
+            set(gca,'XTickLabel',{'Low control' 'High control'},'FontSize',25,'XLim',[0.5 2.5],'YLim',[0 0.4]);
             ylabel('Go bias','FontSize',25);
             set(gcf,'Position',[200 200 900 400])
             
@@ -546,4 +576,39 @@ function myeb(Y,varargin)
             hold off
         end
     end
+end
+
+function [m,se,X] = interval_stats(x,y,q)
+    
+    for i = 1:length(q)-1
+        ix = y>q(i) & y<=q(i+1);
+        X{i} = x(ix);
+        m(i) = nanmean(x(ix));
+        se(i) = nanstd(x(ix))./sqrt(sum(~isnan(x(ix))));
+    end
+end
+
+function [se, m] = wse(X,dim)
+    
+    % Within-subject error, following method of Cousineau (2005).
+    %
+    % USAGE: [se, m] = wse(X,dim)
+    %
+    % INPUTS:
+    %   X - [N x D] data with N observations and D subjects
+    %   dim (optional) - dimension along which to compute within-subject
+    %   variance (default: 2)
+    %
+    % OUTPUTS:
+    %   se - [1 x D] within-subject standard errors
+    %   m - [1 x D] means
+    %
+    % Sam Gershman, June 2015
+    
+    if nargin < 2; dim = 2; end
+    m = squeeze(nanmean(X));
+    X = bsxfun(@minus,X,nanmean(X,dim));
+    N = sum(~isnan(X));
+    se = bsxfun(@rdivide,nanstd(X),sqrt(N));
+    se = squeeze(se);
 end

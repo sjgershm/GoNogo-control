@@ -6,8 +6,11 @@ function [results, bms_results] = fit_models(data,models,results)
     if nargin < 2; models = 1:length(likfuns); end
     
     pmin = 0.01;
-    pmax = 80;
-    btmax = 30;
+    %pmax = 80;
+    %btmax = 30;
+    pmax = 100;
+    btmin = 1e-3;
+    btmax = 50;
     
     for mi = 1:length(models)
         m = models(mi);
@@ -18,29 +21,29 @@ function [results, bms_results] = fit_models(data,models,results)
             
             case 'lik_fixed'
                 
-                param(1) = struct('name','invtemp','logpdf',@(x) 0,'lb',1e-3,'ub',btmax);
+                param(1) = struct('name','invtemp','logpdf',@(x) 0,'lb',btmin,'ub',btmax);
                 param(2) = struct('name','w','logpdf',@(x) 0,'lb',0.001,'ub',0.999);
                 param(3) = struct('name','mq','logpdf',@(x) 0,'lb',0.001,'ub',0.999);
                 param(4) = struct('name','pq','logpdf',@(x) 0,'lb',pmin,'ub',pmax);
-                param(5) = struct('name','mq','logpdf',@(x) 0,'lb',0.001,'ub',0.999);
-                param(6) = struct('name','pq','logpdf',@(x) 0,'lb',pmin,'ub',pmax);
+                param(5) = struct('name','mv','logpdf',@(x) 0,'lb',0.001,'ub',0.999);
+                param(6) = struct('name','pv','logpdf',@(x) 0,'lb',pmin,'ub',pmax);
                 
             case 'lik_adaptive'
                 
-                param(1) = struct('name','invtemp','logpdf',@(x) 0,'lb',1e-3,'ub',btmax);
+                param(1) = struct('name','invtemp','logpdf',@(x) 0,'lb',btmin,'ub',btmax);
                 param(2) = struct('name','mq','logpdf',@(x) 0,'lb',0.001,'ub',0.999);
                 param(3) = struct('name','pq','logpdf',@(x) 0,'lb',pmin,'ub',pmax);
-                param(4) = struct('name','mq','logpdf',@(x) 0,'lb',0.001,'ub',0.999);
-                param(5) = struct('name','pq','logpdf',@(x) 0,'lb',pmin,'ub',pmax);
+                param(4) = struct('name','mv','logpdf',@(x) 0,'lb',0.001,'ub',0.999);
+                param(5) = struct('name','pv','logpdf',@(x) 0,'lb',pmin,'ub',pmax);
                 param(6) = struct('name','w0','logpdf',@(x) 0,'lb',0.001,'ub',0.999);
                 
             case 'lik_adaptive_reduced'
                 
-                param(1) = struct('name','invtemp','logpdf',@(x) 0,'lb',1e-3,'ub',btmax);
+                param(1) = struct('name','invtemp','logpdf',@(x) 0,'lb',btmin,'ub',btmax);
                 param(2) = struct('name','mq','logpdf',@(x) 0,'lb',0.001,'ub',0.999);
                 param(3) = struct('name','pq','logpdf',@(x) 0,'lb',pmin,'ub',pmax);
-                param(4) = struct('name','mq','logpdf',@(x) 0,'lb',0.001,'ub',0.999);
-                param(5) = struct('name','pq','logpdf',@(x) 0,'lb',pmin,'ub',pmax);
+                param(4) = struct('name','mv','logpdf',@(x) 0,'lb',0.001,'ub',0.999);
+                param(5) = struct('name','pv','logpdf',@(x) 0,'lb',pmin,'ub',pmax);
                 fun = str2func('lik_adaptive');
                 
         end
