@@ -59,7 +59,8 @@ function plot_results(fig,results)
             legend({'Low control' 'High control'},'FontSize',25);
             
             [~,p,~,stat] = ttest2(acc{1,1},acc{1,2});
-            disp(['go bias (experiment 1): t(',num2str(stat.df),') = ',num2str(stat.tstat),', p = ',num2str(p)]);
+            d = (mean(acc{1,1}) - mean(acc{1,2}))./sqrt(0.5*(var(acc{1,1})+var(acc{1,2})));
+            disp(['go bias (experiment 1): t(',num2str(stat.df),') = ',num2str(stat.tstat),', p = ',num2str(p),', d = ',num2str(d)]);
             
         case 'gobias2'
             
@@ -89,7 +90,8 @@ function plot_results(fig,results)
             ylabel('Go bias','FontSize',25);
             
             [~,p,~,stat] = ttest(acc(:,1),acc(:,2));
-            disp(['go bias (experiment 2): t(',num2str(stat.df),') = ',num2str(stat.tstat),', p = ',num2str(p)]);
+            d = mean(acc(:,1)-acc(:,2))./std(acc(:,1)-acc(:,2));
+            disp(['go bias (experiment 2): t(',num2str(stat.df),') = ',num2str(stat.tstat),', p = ',num2str(p),', d = ',num2str(d)]);
             
         case 'weight1'
             
@@ -157,7 +159,8 @@ function plot_results(fig,results)
             legend({'Data' 'Model'}','FontSize',25,'Location','NorthWest');
             
             [~,p,~,stat] = ttest(gobias(:,1),gobias(:,end));
-            disp(['weight (experiment 1): t(',num2str(stat.df),') = ',num2str(stat.tstat),', p = ',num2str(p)]);
+            d = nanmean(gobias(:,1)-gobias(:,end))./nanstd(gobias(:,1)-gobias(:,end));
+            disp(['weight (experiment 1): t(',num2str(stat.df),') = ',num2str(stat.tstat),', p = ',num2str(p),', d = ',num2str(d)]);
             
         case 'weight_gobias2'
             
@@ -188,7 +191,8 @@ function plot_results(fig,results)
             ylabel('Go bias','FontSize',25);
             
             [~,p,~,stat] = ttest(gobias(:,1),gobias(:,end));
-            disp(['weight (experiment 2): t(',num2str(stat.df),') = ',num2str(stat.tstat),', p = ',num2str(p)]);
+            d = nanmean(gobias(:,1)-gobias(:,end))./nanstd(gobias(:,1)-gobias(:,end));
+            disp(['weight (experiment 2): t(',num2str(stat.df),') = ',num2str(stat.tstat),', p = ',num2str(p),', d = ',num2str(d)]);
             
         case 'simulation'
             
@@ -232,9 +236,11 @@ function plot_results(fig,results)
             end
             
             [~,p,~,stat] = ttest2(b{1},b{2});
-            disp(['Bias, experiment 1: t(',num2str(stat.df),') = ',num2str(stat.tstat),', p = ',num2str(p)]);
+            d = (mean(b{1})-mean(b{2}))./sqrt(0.5*(var(b{1})+var(b{2})));
+            disp(['Bias, experiment 1: t(',num2str(stat.df),') = ',num2str(stat.tstat),', p = ',num2str(p),', d = ',num2str(d)]);
             [~,p,~,stat] = ttest2(v{1},v{2});
-            disp(['Variance, experiment 1: t(',num2str(stat.df),') = ',num2str(stat.tstat),', p = ',num2str(p)]);
+            d = (mean(v{1})-mean(v{2}))./sqrt(0.5*(var(v{1})+var(v{2})));
+            disp(['Variance, experiment 1: t(',num2str(stat.df),') = ',num2str(stat.tstat),', p = ',num2str(p),', d = ',num2str(d)]);
             
             b_m = [mean(b{1}) mean(b{2})];
             b_err = [std(b{1})./sqrt(length(b{1})) std(b{2})./sqrt(length(b{2}))];
@@ -269,9 +275,11 @@ function plot_results(fig,results)
             end
             
             [~,p,~,stat] = ttest(b(:,1),b(:,2));
-            disp(['Bias, experiment 2: t(',num2str(stat.df),') = ',num2str(stat.tstat),', p = ',num2str(p)]);
+            d = mean(b(:,1)-b(:,2))./std(b(:,1)-b(:,2));
+            disp(['Bias, experiment 2: t(',num2str(stat.df),') = ',num2str(stat.tstat),', p = ',num2str(p),', d = ',num2str(d)]);
             [~,p,~,stat] = ttest(v(:,1),v(:,2));
-            disp(['Variance, experiment 2: t(',num2str(stat.df),') = ',num2str(stat.tstat),', p = ',num2str(p)]);
+            d = mean(v(:,1)-v(:,2))./std(v(:,1)-v(:,2));
+            disp(['Variance, experiment 2: t(',num2str(stat.df),') = ',num2str(stat.tstat),', p = ',num2str(p),', d = ',num2str(d)]);
             
             [b_err,b_m] = wse(b);
             [v_err,v_m] = wse(v);
@@ -385,7 +393,8 @@ function plot_results(fig,results)
             end
             
             [~,p,~,stat] = ttest(b(:,2));
-            disp(['Log trial effect: t(',num2str(stat.df),') = ',num2str(stat.tstat),', p = ',num2str(p)])
+            d = mean(b(:,2))./std(b(:,2));
+            disp(['Log trial effect (Experiment 1): t(',num2str(stat.df),') = ',num2str(stat.tstat),', p = ',num2str(p),', d = ',num2str(d)])
             
             for c = 1:2
                 [err(:,c),m(:,c)] = wse(gobias{c});
@@ -401,6 +410,7 @@ function plot_results(fig,results)
             data = load_data('data2.csv');
             
             gobias = cell(1,2);
+            clear b
             for s = 1:length(data)
                 go = data(s).acc(data(s).s==1);
                 nogo = data(s).acc(data(s).s==2);
@@ -412,7 +422,8 @@ function plot_results(fig,results)
             end
             
             [~,p,~,stat] = ttest(b(:,2));
-            disp(['Log trial effect: t(',num2str(stat.df),') = ',num2str(stat.tstat),', p = ',num2str(p)])
+            d = mean(b(:,2))./std(b(:,2));
+            disp(['Log trial effect (Experiment 2): t(',num2str(stat.df),') = ',num2str(stat.tstat),', p = ',num2str(p),', d = ',num2str(d)])
             
             clear err m
             for c = 1:2
@@ -428,6 +439,20 @@ function plot_results(fig,results)
             data = load_data('data2.csv');
             
             set(gcf,'Position',[200 200 1000 400])
+            
+        case 'instrumental_bias'
+            
+            load results1
+            x = results(3).x(:,2);
+            [~,p,~,stat] = ttest(x);
+            d = mean(x-0.5)./std(x);
+            disp(['Instrumental bias (Experiment 1): t(',num2str(stat.df),') = ',num2str(stat.tstat),', p = ',num2str(p),', d = ',num2str(d)])
+            
+            load results2
+            x = results(3).x(:,2);
+            [~,p,~,stat] = ttest(x);
+            d = mean(x-0.5)./std(x);
+            disp(['Instrumental bias (Experiment 2): t(',num2str(stat.df),') = ',num2str(stat.tstat),', p = ',num2str(p),', d = ',num2str(d)])
     end
     
 end
