@@ -1,4 +1,4 @@
-function data = load_data(filename)
+function data = load_data(filename,exclude)
     
     % Load data from Go/NoGo experiments.
     %
@@ -40,4 +40,6 @@ function data = load_data(filename)
         bad(s,1) = any(A<0.3);
     end
     
-    data(acc'<0.5 | bad) = [];
+    if nargin < 2 || exclude==1
+        data(acc'<0.5 | bad) = [];
+    end

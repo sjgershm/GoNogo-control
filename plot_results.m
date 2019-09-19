@@ -21,7 +21,36 @@ function plot_results(fig,results)
             ylabel('Adaptive weight (w)','FontSize',25);
             xlabel('Trial','FontSize',25);
             legend({'Low control' 'High control'},'FontSize',25,'Location','NorthOutside');
-        
+            
+        case 'gobias_noexclude'
+            
+            acc = cell(2,2);
+            for j = 1:2
+                if j==1
+                    data = load_data('data1.csv',0);
+                else
+                    data = load_data('data2.csv',0);
+                end
+                for s = 1:length(data)
+                    c = data(s).cond(1);
+                    go = data(s).s==1;
+                    nogo = data(s).s==2;
+                    acc{j,c}(end+1) = mean(data(s).acc(go)) - mean(data(s).acc(nogo));
+                end
+            end
+            
+            for c = 1:2
+                for j = 1:size(acc,1)
+                    m(c,j) = mean(acc{j,c});
+                    err(c,j) = std(acc{j,c})./sqrt(length(acc{j,c}));
+                end
+            end
+            
+            barerrorbar(m',err');
+            set(gca,'XTickLabel',{'Experiment 1' 'Experiment 2'},'FontSize',25,'XLim',[0.5 2.5],'YLim',[0 0.55]);
+            ylabel('Go bias','FontSize',25);
+            legend({'Low control' 'High control'},'FontSize',25);
+            
         case 'gobias'
             
             subplot(2,2,1); plot_results('gobias1'); title('Experiment 1','FontSize',25,'FontWeight','Bold');
@@ -200,7 +229,6 @@ function plot_results(fig,results)
             data = load_data('data1.csv');
             load results1;
             param = median(results(3).x);
-            %param = [3 0.5 2 0.5 2];
             data = data(randperm(length(data)));
             simdata(1) = sim_adaptive(param,data(1).s,[0.25 0.75; 0.75 0.25; 0.5 0.5]);
             simdata(2) = sim_adaptive(param,data(2).s,[0.25 0.75; 0.75 0.25; 0.2 0.8]);
@@ -225,7 +253,9 @@ function plot_results(fig,results)
         case 'bias_variance'
             
             data = load_data('data1.csv');
+            load results1
             b = cell(1,2); v = cell(1,2);
+            b2 = cell(1,2); v2 = cell(1,2);
             for s = 1:length(data)
                 c = data(s).cond(1);
                 ix = data(s).s<3;
@@ -233,6 +263,9 @@ function plot_results(fig,results)
                 a = double(data(s).a(ix)==2);
                 b{c}(end+1) = mean(a - go);
                 v{c}(end+1) = mean((a-mean(a)).^2);
+                a = 1 - results(3).latents(s).P(ix);
+                b2{c}(end+1) = mean(a - go);
+                v2{c}(end+1) = mean((a-mean(a)).^2);
             end
             
             [~,p,~,stat] = ttest2(b{1},b{2});
@@ -258,7 +291,9 @@ function plot_results(fig,results)
             ylabel('Variance','FontSize',25);
             
             data = load_data('data2.csv');
+            load results2
             b = []; v = [];
+            b2 = []; v2 = [];
             for s = 1:length(data)
                 for c = 1:2
                     if c==1
@@ -271,6 +306,9 @@ function plot_results(fig,results)
                     a = double(data(s).a(ix)==2);
                     b(s,c) = nanmean(a - go);
                     v(s,c) = nanmean((a-mean(a)).^2);
+                    a = 1 - results(3).latents(s).P(ix);
+                    b2(s,c) = mean(a - go);
+                    v2(s,c) = mean((a-mean(a)).^2);
                 end
             end
             
@@ -295,6 +333,40 @@ function plot_results(fig,results)
             ylabel('Variance','FontSize',25);
             
             set(gcf,'Position',[200 200 900 650]);
+            
+        case 'sim_bias_variance'
+            
+            load simdata
+            data = load_data('data1.csv');
+            
+            b_m = []; b_err = []; v_m = []; v_err = [];
+            for i = 2:3
+                b = cell(1,2); v = cell(1,2);
+                for s = 1:size(simdata,1)
+                    c = data(s).cond(1);
+                    ix = simdata(s,i).s<3;
+                    go = double(simdata(s,i).s(ix)==1);
+                    a = double(simdata(s,i).a(ix)==2);
+                    b{c}(end+1) = mean(a - go);
+                    v{c}(end+1) = mean((a-mean(a)).^2);
+                end
+                
+                b_m = [b_m; mean(b{1}) mean(b{2})];
+                b_err = [b_err; std(b{1})./sqrt(length(b{1})) std(b{2})./sqrt(length(b{2}))];
+                v_err = [v_err; std(v{1})./sqrt(length(v{1})) std(v{2})./sqrt(length(v{2}))];
+                v_m = [v_m; mean(v{1}) mean(v{2})];
+            end
+            
+            subplot(1,2,1);
+            barerrorbar(b_m',b_err');
+            set(gca,'XTickLabel',{'Low control' 'High control'},'FontSize',25,'XLim',[0.5 2.5],'YLim',[-0.02 0.5]);
+            ylabel('Bias','FontSize',25);
+            legend({'Instrumental' 'Pavlovian'},'FontSize',25);
+            subplot(1,2,2);
+            barerrorbar(v_m',v_err');
+            set(gca,'XTickLabel',{'Low control' 'High control'},'FontSize',25,'XLim',[0.5 2.5],'YLim',[0 0.3]);
+            ylabel('Variance','FontSize',25);
+            set(gcf,'Position',[200 200 1000 450]);
             
         case 'complexity_schematic'
             
@@ -325,7 +397,7 @@ function plot_results(fig,results)
         case 'learning_curves'
             
             data = load_data('data1.csv');
-            L = {'Experiment 1: low control' 'Experiment 1: high control'; 'Experiment 2: low control' 'Experiment 2: high control'};
+            L = {'Exp 1: Go-to-Win' 'Exp 1: No-Go-To-Win' 'Exp 1: Decoy'; 'Exp 2: Go-to-Win' 'Exp 2: No-Go-To-Win' 'Exp 2: Decoy'};
             
             pGo = cell(1,2); n = [0 0];
             for s = 1:length(data)
@@ -336,19 +408,19 @@ function plot_results(fig,results)
                 end
             end
             
-            for c = 1:2
-                m = []; err = [];
-                for i = 1:3
-                    [err(:,i),m(:,i)] = wse(pGo{c}(:,:,i));
+            for i = 1:3
+                subplot(2,3,i);
+                for c = 1:2
+                    m(:,c) = squeeze(nanmean(pGo{c}(:,:,i)));
+                    err(:,c) = squeeze(nanstd(pGo{c}(:,:,i))./sqrt(n(c)));
                 end
-                subplot(2,2,c);
                 myeb(m,err);
                 set(gca,'FontSize',20,'YLim',[0 1]);
                 ylabel('P(Go)','FontSize',25);
                 xlabel('Trial','FontSize',25);
-                title(L{1,c},'FontSize',25,'FontWeight','Bold');
-                if c==1
-                    legend({'Go-to-Win' 'No-Go-To-Win' 'Decoy'},'FontSize',20,'Box','off','Location','Best');
+                title(L{1,i},'FontSize',25,'FontWeight','Bold');
+                if i==1
+                    legend({'Low control' 'High control'},'FontSize',20,'Box','off','Location','Best');
                 end
             end
             
@@ -362,63 +434,85 @@ function plot_results(fig,results)
                 end
             end
             
-            for c = 1:2
-                m = []; err = [];
-                for i = 1:3
-                    [err(:,i),m(:,i)] = wse(pGo{c}(:,:,i));
+            for i = 1:3
+                subplot(2,3,i+3);
+                for c = 1:2
+                    n(c) = size(pGo{c},1);
+                    m(:,c) = squeeze(nanmean(pGo{c}(:,:,i)));
+                    err(:,c) = squeeze(nanstd(pGo{c}(:,:,i))./sqrt(n(c)));
+                    set(gca,'FontSize',20,'YLim',[0 1]);
+                    ylabel('P(Go)','FontSize',25);
+                    xlabel('Trial','FontSize',25);
+                    title(L{2,i},'FontSize',25,'FontWeight','Bold');
                 end
-                subplot(2,2,c+2);
                 myeb(m,err);
-                set(gca,'FontSize',20,'YLim',[0 1]);
-                ylabel('P(Go)','FontSize',25);
-                xlabel('Trial','FontSize',25);
-                title(L{2,c},'FontSize',25,'FontWeight','Bold');
+                
+                if i==1
+                    legend({'Low control' 'High control'},'FontSize',20,'Box','off','Location','Best');
+                end
             end
             
-            set(gcf,'Position',[200 200 1000 800])
+            set(gcf,'Position',[200 200 1200 800])
             
         case 'gobias_dynamic'
             
-            N = 5;
-            
             data = load_data('data1.csv');
+            load results1
             
-            gobias = cell(1,2);
+            gobias = cell(2,2);
             for s = 1:length(data)
                 c = data(s).cond(1);
                 go = data(s).acc(data(s).s==1);
                 nogo = data(s).acc(data(s).s==2);
-                gobias{c}(end+1,:) = smooth(go-nogo);
+                gobias{c,1}(end+1,:) = smooth(go-nogo);
                 b(s,:) = glmfit(log(1:length(go))',go' - nogo');
+                go = results(3).latents(s).acc(data(s).s==1);
+                nogo = results(3).latents(s).acc(data(s).s==2);
+                gobias{c,2}(end+1,:) = smooth(go-nogo);
             end
             
             [~,p,~,stat] = ttest(b(:,2));
             d = mean(b(:,2))./std(b(:,2));
             disp(['Log trial effect (Experiment 1): t(',num2str(stat.df),') = ',num2str(stat.tstat),', p = ',num2str(p),', d = ',num2str(d)])
             
-            for c = 1:2
-                [err(:,c),m(:,c)] = wse(gobias{c});
+            for j = 1:2
+                for c = 1:2
+                    [err(:,c),m(:,c)] = wse(gobias{c,j});
+                end
+                subplot(2,2,j);
+                myeb(m,err);
+                set(gca,'FontSize',20,'YLim',[0 1]);
+                ylabel('Go bias','FontSize',25);
+                xlabel('Trial','FontSize',25);
+                if j==1; legend({'Low control' 'High control'},'FontSize',25); end
+                
+                if j ==1
+                    title('Experiment 1: data','FontSize',25,'FontWeight','Bold');
+                else
+                    title('Experiment 1: model','FontSize',25,'FontWeight','Bold');
+                end
             end
-            subplot(1,2,1);
-            myeb(m,err);
-            set(gca,'FontSize',20,'YLim',[0 1]);
-            ylabel('Go bias','FontSize',25);
-            xlabel('Trial','FontSize',25);
-            title('Experiment 1','FontSize',25,'FontWeight','Bold');
-            legend({'Low control' 'High control'},'FontSize',25);
             
             data = load_data('data2.csv');
+            load results2
             
-            gobias = cell(1,2);
+            gobias = cell(2,2);
             clear b
             for s = 1:length(data)
                 go = data(s).acc(data(s).s==1);
                 nogo = data(s).acc(data(s).s==2);
-                gobias{1}(end+1,:) = smooth(go-nogo);
+                gobias{1,1}(end+1,:) = smooth(go-nogo);
                 go = data(s).acc(data(s).s==4);
                 nogo = data(s).acc(data(s).s==5);
-                gobias{2}(end+1,:) = smooth(go-nogo);
+                gobias{2,1}(end+1,:) = smooth(go-nogo);
                 b(s,:) = glmfit(log(1:length(go))',go' - nogo');
+                
+                go = results(3).latents(s).acc(data(s).s==1);
+                nogo = results(3).latents(s).acc(data(s).s==2);
+                gobias{1,2}(end+1,:) = smooth(go-nogo);
+                go = results(3).latents(s).acc(data(s).s==4);
+                nogo = results(3).latents(s).acc(data(s).s==5);
+                gobias{2,2}(end+1,:) = smooth(go-nogo);
             end
             
             [~,p,~,stat] = ttest(b(:,2));
@@ -426,19 +520,25 @@ function plot_results(fig,results)
             disp(['Log trial effect (Experiment 2): t(',num2str(stat.df),') = ',num2str(stat.tstat),', p = ',num2str(p),', d = ',num2str(d)])
             
             clear err m
-            for c = 1:2
-                [err(:,c),m(:,c)] = wse(gobias{c});
+            for j = 1:2
+                for c = 1:2
+                    [err(:,c),m(:,c)] = wse(gobias{c,j});
+                end
+                subplot(2,2,j+2);
+                myeb(m,err);
+                set(gca,'FontSize',20,'YLim',[0 1]);
+                ylabel('Go bias','FontSize',25);
+                xlabel('Trial','FontSize',25);
+                if j ==1
+                    title('Experiment 2: data','FontSize',25,'FontWeight','Bold');
+                else
+                    title('Experiment 2: model','FontSize',25,'FontWeight','Bold');
+                end
             end
-            subplot(1,2,2);
-            myeb(m,err);
-            set(gca,'FontSize',20,'YLim',[0 1]);
-            ylabel('Go bias','FontSize',25);
-            xlabel('Trial','FontSize',25);
-            title('Experiment 2','FontSize',25,'FontWeight','Bold');
             
             data = load_data('data2.csv');
             
-            set(gcf,'Position',[200 200 1000 400])
+            set(gcf,'Position',[200 200 1000 800])
             
         case 'instrumental_bias'
             
@@ -457,7 +557,7 @@ function plot_results(fig,results)
     
 end
 
-function myeb(Y,varargin)
+function H = myeb(Y,varargin)
     %
     % myeb(Y,varargin);
     %
@@ -487,18 +587,13 @@ function myeb(Y,varargin)
     %	.) if mu and std are 2D, it will plot size(Y,2) lines in the
     %	standard sequence of colours; each line mu(:,k) will have a shaded
     %	region in the same colour, but less saturated given by std(:,k)
-    %
-    %
-    % Quentin Huys, 2007
-    % Center for Theoretical Neuroscience, Columbia University
-    % Email: qhuys [at] n e u r o theory [dot] columbia.edu
-    % (just get rid of the spaces, replace [at] with @ and [dot] with .)
     
     
     %col=[0 0 1; 0 .5 0; 1 0 0; 0 1 1; 1 0 1; 1 .5 0; 1 .5 1];
     %col=[0.8 0.5 0; 0 0 1; 0 .5 0; 1 0 0; 1 0 1; 1 .5 0; 1 .5 1];
-    col = linspecer(size(Y,2));
+    %col = linspecer(size(Y,2));
     %col = col([1 end],:);
+    col = linspecer(2);
     ccol=col+.5; ccol(ccol>1)=1;
     
     if isempty(varargin)
@@ -511,7 +606,7 @@ function myeb(Y,varargin)
             %hold on; h=fill([ind1 ind2],[m-s m(ind2)+s(ind2)],.6*ones(1,3));
             hold on; h=fill([ind1 ind2],[m-s m(ind2)+s(ind2)],.6*[1 0 0]);
             set(h,'edgecolor',.6*[1 0 0])
-            plot(ind1,m,'LineWidth',4)
+            H = plot(ind1,m,'LineWidth',4);
             hold off
         elseif length(size(Y))>2
             cla; hold on;
@@ -527,7 +622,7 @@ function myeb(Y,varargin)
             for k=1:size(Y,3)
                 m=mean(Y(:,:,k));
                 s=std(Y(:,:,k));
-                plot(ind1,m,'LineWidth',4,'color',col(k,:))
+                H = plot(ind1,m,'LineWidth',4,'color',col(k,:));
             end
             hold off
         end
@@ -543,7 +638,7 @@ function myeb(Y,varargin)
             ind2=ind1(end:-1:1);
             hold on; h=fill([ind1 ind2],[m-s m(ind2)+s(ind2)],.6*ones(1,3));
             set(h,'edgecolor',.6*ones(1,3))
-            plot(ind1,m,'LineWidth',4)
+            H = plot(ind1,m,'LineWidth',4);
             hold off
         else
             
@@ -551,7 +646,7 @@ function myeb(Y,varargin)
             ind2=ind1(end:-1:1);
             cla; hold on;
             for k=1:size(Y,2)
-                plot(ind1,m(:,k)','LineWidth',4,'color',col(k,:));
+                H = plot(ind1,m(:,k)','LineWidth',4,'color',col(k,:));
             end
             if size(Y,2)>8; col=jet(size(Y,2));ccol=col+.8; ccol(ccol>1)=1;end
             for k=1:size(Y,2)
@@ -562,7 +657,7 @@ function myeb(Y,varargin)
             end
             for k=1:size(Y,2)
                 mm=m(:,k)';
-                plot(ind1,mm,'LineWidth',4,'color',col(k,:));
+                H = plot(ind1,mm,'LineWidth',4,'color',col(k,:));
             end
             hold off
         end
@@ -580,7 +675,7 @@ function myeb(Y,varargin)
             ind2=ind1(end:-1:1);
             hold on; h=fill([ix(ind1) ix(ind2)],[m-s m(ind2)+s(ind2)],.6*ones(1,3));
             set(h,'edgecolor',.6*ones(1,3))
-            plot(ix(ind1),m,'LineWidth',4)
+            H = plot(ix(ind1),m,'LineWidth',4);
             hold off
         else
             ind1=(1:size(Y,1));
@@ -596,20 +691,10 @@ function myeb(Y,varargin)
             for k=1:size(Y,2)
                 mm=m(:,k)';
                 ss=s(:,k)';
-                plot(ix(ind1),mm,'LineWidth',4,'color',col(k,:))
+                H = plot(ix(ind1),mm,'LineWidth',4,'color',col(k,:));
             end
             hold off
         end
-    end
-end
-
-function [m,se,X] = interval_stats(x,y,q)
-    
-    for i = 1:length(q)-1
-        ix = y>q(i) & y<=q(i+1);
-        X{i} = x(ix);
-        m(i) = nanmean(x(ix));
-        se(i) = nanstd(x(ix))./sqrt(sum(~isnan(x(ix))));
     end
 end
 
